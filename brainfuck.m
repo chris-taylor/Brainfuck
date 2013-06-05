@@ -1,69 +1,92 @@
 function brainfuck(program)
 
+global ATYPE AMAX AMIN
+
 NCELLS = 30000;
-DEBUG  = false;
-N = length(program) + 1;
+ATYPE  = 'uint8';
+AMAX   = intmax(ATYPE);
+AMIN   = intmin(ATYPE);
+N = length(program);
 
-iptr = 1;
-dptr = 1;
-data = char(zeros(1,NCELLS));
+i = 1;                      % instruction pointer
+p = 1;                      % data pointer
+a = char(zeros(1,NCELLS));  % data array
 
-while iptr < N
-   
-    switch program(iptr)
-        case '>'
-            dptr = dptr + 1;
-        case '<'
-            dptr = dptr - 1;
-        case '+'
-            data(dptr) = data(dptr) + 1;
-        case '-'
-            data(dptr) = data(dptr) - 1;
-        case '.'
-            fprintf('%s',data(dptr));
-        case ','
-            data(dptr) = getchar();
-        case '['
-            if data(dptr) == 0
-                depth = 1;
-                iptr  = iptr + 1;
-                while depth > 0
-                    if program(iptr) == '['
-                        depth = depth + 1;
-                    elseif program(iptr) == ']'
-                        depth = depth - 1;
-                    end
-                    iptr = iptr + 1;
-                end
-            end
-        case ']'
-            if data(dptr) ~= 0
-                depth = 1;
-                iptr  = iptr - 1;
-                while depth > 0
-                    if program(iptr) == ']'
-                        depth = depth + 1;
-                    elseif program(iptr) == '['
-                        depth = depth - 1;
-                    end
-                    iptr = iptr - 1;
-                end
-            end
+% Paren matching routine
+q = match_parens(program,N);
+
+% Interpreter
+while i < N+1
+    
+    switch program(i)
+        case '>'                    % move pointer right
+            p = p + 1;
+        case '<'                    % move pointer left
+            p = p - 1;
+        case '+'                    % increment byte at pointer
+            a(p) = inc(a(p));
+        case '-'                    % decrement byte at pointer
+            a(p) = dec(a(p));
+        case '.'                    % output character at pointer location
+            putchar(a(p));
+        case ','                    % read one byte from input and store at pointer location
+            a(p) = getchar();
+        case '['                    % if a(p)=0, skip past matching bracket
+            if a(p) == 0, i = q(i); end
+        case ']'                    % if a(p)!=0, return to opening bracket
+            if a(p) ~= 0, i = q(i) - 1; end
+        case '$'                    % debugging command - dumps a(1:10) to the console
+            disp(uint8(a(1:10)))
     end
     
-    if DEBUG
-        fprintf('iptr = %d\n', iptr);
-        fprintf('dptr = %d\n', dptr);
-        fprintf('data(%d) = %d\n', dptr, int32(data(dptr)))
-    end
-        
-    iptr = iptr + 1;
+    i = i + 1;
     
 end
 
 function c = getchar()
-inp = [];
-while isempty(inp)
-    inp = input('','s');
+inp = input('','s');
+if isempty(inp)
+    c = char(0);
+elseif inp(1) == '\'
+    switch inp(2)
+        case 's'
+            c = ' ';
+        case 'n'
+            c = char(10);
+    end 
+else   
+    c = inp(1);
 end
-c = inp(1);
+
+function putchar(c)
+fprintf('%s',char(c));
+
+function a = inc(a)
+global AMIN AMAX
+if a < AMAX
+    a = a + 1;
+else
+    a = AMIN;
+end
+
+function a = dec(a)
+global AMIN AMAX
+if a > AMIN
+    a = a - 1;
+else
+    a = AMAX;
+end
+
+function q = match_parens(program,N)
+q = zeros(1,N);
+d = [];
+for j = 1:N
+    if program(j) == '['
+        d(end+1) = j;           %#ok<AGROW>
+    elseif program(j) == ']'
+        q(d(end)) = j;
+        q(j)      = d(end);     
+        d(end) = [];            %#ok<AGROW>
+    end
+end
+    
