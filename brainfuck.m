@@ -35,6 +35,10 @@ while i < N+1
             if a(p) == 0, i = q(i); end
         case ']'                    % if a(p)!=0, return to opening bracket
             if a(p) ~= 0, i = q(i) - 1; end
+        case ';'                    % read one byte from keyboard as numeric value, and store at pointer location
+            a(p) = getint();
+        case ':'                    % write byte at pointer location as a numeric value
+            putint(a(p));
         case '$'                    % debugging command - dumps a(1:10) to the console
             disp(uint8(a(1:10)))
     end
@@ -60,6 +64,17 @@ end
 
 function putchar(c)
 fprintf('%s',char(c));
+
+function c = getint();
+inp = input('','s');
+if isempty(inp)
+    c = 0;
+else
+    c = uint8(str2double(inp));
+end
+
+function putint(c)
+fprintf('%4d',c);
 
 function a = inc(a)
 global AMIN AMAX
